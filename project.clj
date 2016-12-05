@@ -9,7 +9,8 @@
   :dependencies [[org.clojure/clojure "1.9.0-alpha14"]
                  [org.clojure/clojurescript "1.9.293"]
                  [org.omcljs/om "1.0.0-alpha47"]
-                 [org.onyxplatform/onyx-local-rt "0.9.11.2"]]
+                 [org.onyxplatform/onyx-local-rt "0.9.15.0"
+                  :exclusions [clojure-future-spec]]]
 
   :plugins [[lein-figwheel "0.5.8"]
             [lein-cljsbuild "1.1.4" :exclusions [[org.clojure/clojure]]]]

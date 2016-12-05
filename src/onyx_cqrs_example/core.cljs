@@ -9,29 +9,98 @@
 (enable-console-print!)
 
 
-;; ^:export the function if using in ClojureScript.
-(defn ^:export my-inc [segment]
-  (update-in segment [:n] inc))
+(defn ^:export init-account [window]
+  0)
+
+(defn ^:export process-account-command [window state command]
+  (case (:command/type command)
+    :command.type/create-account
+    {:event/type :event.type/account-created}
+
+    :command.type/deposit
+    {:event/type :event.type/funds-modified
+     :funds.modify/amount (:deposit/amount command)}
+
+    :command.type/withdraw
+    {:event/type :event.type/funds-modified
+     :funds.modify/amount (- (:withdraw/amount command))}))
+
+(defn ^:export apply-account-event [window state event]
+  (case (:event/type event)
+    :event.type/account-created
+    0
+
+    :event.type/funds-modified
+    (+ state (:funds.modify/amount event))))
+
+(defn ^:export dump-aggregate [event window trigger opts state]
+  (println "dump-aggregate")
+  (println "state")
+  (pprint state)
+  (println "event")
+  (pprint event))
+
+(def ^:export account-aggregation
+  {:aggregation/init init-account
+   :aggregation/create-state-update process-account-command
+   :aggregation/apply-state-update apply-account-event})
+
 
 (def job
-  {:workflow [[:in :inc] [:inc :out]]
-   :catalog [{:onyx/name :in
-              :onyx/type :input
-              :onyx/batch-size 1}
-             {:onyx/name :inc
-              :onyx/type :function
-              :onyx/fn ::my-inc
-              :onyx/batch-size 1}
-             {:onyx/name :out
-              :onyx/type :output
-              :onyx/batch-size 1}]
-   :lifecycles []})
+  {:workflow
+   [[:in :task.id/account]
+    [:task.id/account :out]]
+
+   :catalog
+   [{:onyx/name :in
+     :onyx/type :input
+     :onyx/batch-size 1}
+    {:onyx/name :task.id/account
+     :onyx/fn :cljs.core/identity
+     :onyx/type :function
+     :onyx/group-by-key :account/id
+     :onyx/min-peers 3
+     :onyx/flux-policy :recover
+     :onyx/batch-size 1}
+    {:onyx/name :out
+     :onyx/type :output
+     :onyx/batch-size 1}]
+
+   :lifecycles
+   []
+
+   :windows
+   [{:window/id :window.id/account
+     :window/task :task.id/account
+     :window/type :global
+     :window/aggregation ::account-aggregation}]
+
+   :triggers
+   [{:trigger/window-id :window.id/account
+     :trigger/on :onyx.triggers/segment
+     :trigger/threshold [1 :elements]
+     :trigger/refinement :onyx.refinements/accumulating
+     :trigger/sync ::dump-aggregate}]
+   })
+
 
 (def commands
-  [{:command/type :command.type/inc
-    :n 41}
-   {:command/type :command.type/inc
-    :n 84}])
+  [{:command/type :command.type/create-account
+    :account/id "betty"}
+   {:command/type :command.type/create-account
+    :account/id "sue"}
+   {:command/type :command.type/deposit
+    :account/id "betty"
+    :deposit/amount 100}
+   {:command/type :command.type/deposit
+    :account/id "sue"
+    :deposit/amount 200}
+   {:command/type :command.type/withdraw
+    :account/id "betty"
+    :withdraw/amount 40}
+   {:command/type :command.type/withdraw
+    :account/id "sue"
+    :withdraw/amount 70}])
 
 (defn init-env [job]
   (reduce
