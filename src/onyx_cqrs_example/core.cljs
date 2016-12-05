@@ -17,14 +17,14 @@
   {:workflow [[:in :inc] [:inc :out]]
    :catalog [{:onyx/name :in
               :onyx/type :input
-              :onyx/batch-size 20}
+              :onyx/batch-size 1}
              {:onyx/name :inc
               :onyx/type :function
               :onyx/fn ::my-inc
-              :onyx/batch-size 20}
+              :onyx/batch-size 1}
              {:onyx/name :out
               :onyx/type :output
-              :onyx/batch-size 20}]
+              :onyx/batch-size 1}]
    :lifecycles []})
 
 (def commands
