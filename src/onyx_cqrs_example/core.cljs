@@ -12,7 +12,7 @@
 (defn ^:export init-account [window]
   0)
 
-(defn ^:export process-account-command [window state command]
+(defn ^:export account-create-state-update [window state command]
   (case (:command/type command)
     :command.type/create-account
     {:event/type :event.type/account-created}
@@ -25,25 +25,21 @@
     {:event/type :event.type/funds-modified
      :funds.modify/amount (- (:withdraw/amount command))}))
 
-(defn ^:export apply-account-event [window state event]
-  (case (:event/type event)
+(defn ^:export account-apply-state-update [window state change]
+  (case (:event/type change)
     :event.type/account-created
     0
 
     :event.type/funds-modified
-    (+ state (:funds.modify/amount event))))
+    (+ state (:funds.modify/amount change))))
 
-(defn ^:export dump-aggregate [event window trigger opts state]
-  (println "dump-aggregate")
-  (println "state")
-  (pprint state)
-  (println "event")
-  (pprint event))
+(defn ^:export dump-aggregate [task-event window trigger state-event state]
+  (println (str "account '" (:group state-event) "':" state)))
 
 (def ^:export account-aggregation
   {:aggregation/init init-account
-   :aggregation/create-state-update process-account-command
-   :aggregation/apply-state-update apply-account-event})
+   :aggregation/create-state-update account-create-state-update
+   :aggregation/apply-state-update account-apply-state-update})
 
 
 (def job
