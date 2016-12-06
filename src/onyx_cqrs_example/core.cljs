@@ -3,81 +3,11 @@
             [goog.dom :as gdom]
             [om.next :as om :refer-macros [defui]]
             [om.dom :as dom]
-            [onyx-local-rt.api :as onyx]))
+            [onyx-local-rt.api :as onyx]
+            [onyx-cqrs-example.job :as example-job]))
 
 
 (enable-console-print!)
-
-
-(defn ^:export init-account [window]
-  0)
-
-(defn ^:export account-create-state-update [window state command]
-  (case (:command/type command)
-    :command.type/create-account
-    {:event/type :event.type/account-created}
-
-    :command.type/deposit
-    {:event/type :event.type/funds-modified
-     :funds.modify/amount (:deposit/amount command)}
-
-    :command.type/withdraw
-    {:event/type :event.type/funds-modified
-     :funds.modify/amount (- (:withdraw/amount command))}))
-
-(defn ^:export account-apply-state-update [window state change]
-  (case (:event/type change)
-    :event.type/account-created
-    0
-
-    :event.type/funds-modified
-    (+ state (:funds.modify/amount change))))
-
-(defn ^:export dump-aggregate [task-event window trigger state-event state]
-  (println (str "account '" (:group state-event) "':" state)))
-
-(def ^:export account-aggregation
-  {:aggregation/init init-account
-   :aggregation/create-state-update account-create-state-update
-   :aggregation/apply-state-update account-apply-state-update})
-
-
-(def job
-  {:workflow
-   [[:in :task.id/account]
-    [:task.id/account :out]]
-
-   :catalog
-   [{:onyx/name :in
-     :onyx/type :input
-     :onyx/batch-size 1}
-    {:onyx/name :task.id/account
-     :onyx/fn :cljs.core/identity
-     :onyx/type :function
-     :onyx/group-by-key :account/id
-     :onyx/min-peers 3
-     :onyx/flux-policy :recover
-     :onyx/batch-size 1}
-    {:onyx/name :out
-     :onyx/type :output
-     :onyx/batch-size 1}]
-
-   :lifecycles
-   []
-
-   :windows
-   [{:window/id :window.id/account
-     :window/task :task.id/account
-     :window/type :global
-     :window/aggregation ::account-aggregation}]
-
-   :triggers
-   [{:trigger/window-id :window.id/account
-     :trigger/on :onyx.triggers/segment
-     :trigger/threshold [1 :elements]
-     :trigger/refinement :onyx.refinements/accumulating
-     :trigger/sync ::dump-aggregate}]
-   })
 
 
 (def commands
@@ -110,8 +40,14 @@
 
 
 (def init-data
-  {:cqrs.onyx/envs
-   (init-envs job)})
+  {:cqrs/command-store
+   {}
+
+   :cqrs/event-store
+   {}
+
+   :cqrs.onyx/envs
+   (init-envs (example-job/create))})
 
 
 (defui EnvSummary
@@ -170,7 +106,7 @@
    (fn []
      (swap! (:state env)
             update-in [:cqrs.onyx/envs]
-            #(init-envs job)))})
+            #(init-envs (example-job/create))))})
 
 (defmethod mutate 'cqrs.env/revert
   [env key params]
