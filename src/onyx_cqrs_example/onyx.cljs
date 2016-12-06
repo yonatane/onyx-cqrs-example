@@ -3,14 +3,15 @@
             [onyx-local-rt.api :as onyx]))
 
 
-;(defn ^:export before-task-start [event lifecycle]
-;  event) ;TODO: init event/command store or get connection to it.
-;
-;(def ^:export logging-lifecycle-calls
-;  {:lifecycle/before-task-start before-task-start})
+(defn before-task-start [event lifecycle]
+  event)
+
+(def ^:export logging-lifecycle-calls
+  {:lifecycle/before-task-start before-task-start})
 
 
 (defn ^:export dump-aggregate [task-event window trigger state-event state]
+  (cljs.pprint/pprint task-event)
   (println (str "account '" (:group state-event) "': " state)))
 
 
@@ -35,10 +36,8 @@
      :onyx/batch-size 1}]
 
    :lifecycles
-   [
-    ;{:lifecycle/task :task.id/account
-    ; :lifecycle/calls ::logging-lifecycle-calls}
-    ]
+   [{:lifecycle/task :task.id/account
+     :lifecycle/calls ::logging-lifecycle-calls}]
 
    :windows
    [{:window/id :window.id/account
@@ -59,11 +58,7 @@
   ([]
    (new-onyx-env (job)))
   ([job]
-   (reduce
-     (fn [onyx-env segment]
-       (onyx/new-segment onyx-env :in segment))
-     (onyx/init job)
-     commands)))
+   (onyx/init job)))
 
 (defn send [onyx-env segments]
   (reduce
