@@ -1,30 +1,28 @@
 (ns onyx-cqrs-example.onyx
-  (:require [onyx-cqrs-example.account-aggregation]
+  (:require [onyx-cqrs-example.account :as account]
+            [onyx-cqrs-example.global-reconciler :as global-reconciler]
             [onyx-local-rt.api :as onyx]))
 
 
-(defn before-task-start [event lifecycle]
-  event)
+(defn inject-state-before-task-start [event lifecycle]
+  (assoc
+    event
+    :cqrs.app-state/reconciler (global-reconciler/get)))
 
-(def ^:export logging-lifecycle-calls
-  {:lifecycle/before-task-start before-task-start})
-
-
-(defn ^:export dump-aggregate [task-event window trigger state-event state]
-  (cljs.pprint/pprint task-event)
-  (println (str "account '" (:group state-event) "': " state)))
+(def ^:export inject-state-lifecycle-calls
+  {:lifecycle/before-task-start inject-state-before-task-start})
 
 
 (defn job []
   {:workflow
-   [[:in :task.id/account]
-    [:task.id/account :out]]
+   [[:in ::aggregate-task]
+    [::aggregate-task :out]]
 
    :catalog
    [{:onyx/name :in
      :onyx/type :input
      :onyx/batch-size 1}
-    {:onyx/name :task.id/account
+    {:onyx/name ::aggregate-task
      :onyx/fn :cljs.core/identity
      :onyx/type :function
      :onyx/group-by-key :account/id
@@ -36,21 +34,21 @@
      :onyx/batch-size 1}]
 
    :lifecycles
-   [{:lifecycle/task :task.id/account
-     :lifecycle/calls ::logging-lifecycle-calls}]
+   [{:lifecycle/task ::aggregate-task
+     :lifecycle/calls ::inject-state-lifecycle-calls}]
 
    :windows
-   [{:window/id :window.id/account
-     :window/task :task.id/account
+   [{:window/id ::account-window
+     :window/task ::aggregate-task
      :window/type :global
-     :window/aggregation :onyx-cqrs-example.account-aggregation/aggregation}]
+     :window/aggregation ::account/aggregation}]
 
    :triggers
-   [{:trigger/window-id :window.id/account
+   [{:trigger/window-id ::account-window
      :trigger/on :onyx.triggers/segment
      :trigger/threshold [1 :elements]
      :trigger/refinement :onyx.refinements/accumulating
-     :trigger/sync ::dump-aggregate}]
+     :trigger/sync ::account/sync-aggregation}]
    })
 
 

@@ -17,10 +17,15 @@
 (defui EnvSummary
   static om/IQuery
   (query [this]
-    [:cqrs.onyx/env :cqrs.scenario/commands])
+    [:cqrs.onyx/env
+     :cqrs.scenario/commands
+     :cqrs/event-store])
   Object
   (render [this]
-    (let [{onyx-env :cqrs.onyx/env commands :cqrs.scenario/commands} (om/props this)]
+    (let [{onyx-env :cqrs.onyx/env
+           commands :cqrs.scenario/commands
+           event-store :cqrs/event-store}
+          (om/props this)]
       (dom/div nil
                (dom/h3 nil "Env Summary:")
                (dom/div
@@ -57,7 +62,10 @@
                    "Stop"))
                (dom/textarea
                  #js {:className "env-summary"
-                      :value (with-out-str (pprint (onyx/env-summary onyx-env)))})))))
+                      :value (with-out-str (pprint (onyx/env-summary onyx-env)))})
+               (dom/textarea
+                 #js {:className "event-store"
+                      :value (with-out-str (pprint event-store))})))))
 
 
 (om/add-root! (global-reconciler/get)
