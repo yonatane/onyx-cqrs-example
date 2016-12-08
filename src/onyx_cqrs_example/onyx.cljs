@@ -47,7 +47,7 @@
    [{:trigger/window-id ::account-window
      :trigger/on :onyx.triggers/segment
      :trigger/threshold [1 :elements]
-     :trigger/refinement :onyx.refinements/accumulating
+     :trigger/refinement ::account/refinement
      :trigger/sync ::account/sync-aggregation}]
    })
 

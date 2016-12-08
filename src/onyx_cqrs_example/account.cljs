@@ -5,8 +5,8 @@
 
 
 (defn init [window]
-  {:events []
-   :aggregate nil})
+  {::events []
+   ::aggregate nil})
 
 (defn create-state-update [window state command]
   (case (:command/type command)
@@ -30,26 +30,43 @@
      :event/id (:command/id command)}))
 
 (defn apply-state-update [window state change]
-  (let [next-state (update state :events conj change)]
+  (let [next-state (update state ::events conj change)]
     (case (:event/type change)
       :event.type/account-created
       (assoc
         next-state
-        :aggregate 0)
+        ::aggregate 0)
 
       :event.type/funds-modified
       (update
         next-state
-        :aggregate
+        ::aggregate
         + (:funds.modify/amount change))
 
       next-state)))
-
 
 (def ^:export aggregation
   {:aggregation/init init
    :aggregation/create-state-update create-state-update
    :aggregation/apply-state-update apply-state-update})
+
+
+(defn refinement-create-state-update
+  [trigger state state-event]
+  ::discard-persisted)
+
+(defn refinement-apply-state-update
+  [trigger state entry]
+  (case entry
+    ::discard-persisted
+    (update state ::events empty) ;TODO: remove only those that were persisted
+
+    ;; else leave as is
+    state))
+
+(def ^:export refinement
+  {:refinement/create-state-update refinement-create-state-update
+   :refinement/apply-state-update refinement-apply-state-update})
 
 
 (defn ^:export sync-aggregation [task-event window trigger state-event state]
@@ -58,7 +75,7 @@
                      task-event
                      :cqrs.app-state/reconciler (global-reconciler/get))
         reconciler (:cqrs.app-state/reconciler task-event)
-        {:keys [events aggregate]} state]
+        {::keys [events aggregate]} state]
     (doseq [event events]
       (try
         (om/transact! reconciler `[(cqrs.store/put
