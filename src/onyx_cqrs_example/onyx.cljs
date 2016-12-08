@@ -22,13 +22,16 @@
    [{:onyx/name :in
      :onyx/type :input
      :onyx/batch-size 1}
+
     {:onyx/name ::aggregate-task
      :onyx/fn :cljs.core/identity
      :onyx/type :function
      :onyx/group-by-key :account/id
+     :onyx/uniqueness-key :command/id  ;; ignored in onyx-local-rt but useful in real onyx.
      :onyx/min-peers 3
      :onyx/flux-policy :recover
      :onyx/batch-size 1}
+    
     {:onyx/name :out
      :onyx/type :output
      :onyx/batch-size 1}]
