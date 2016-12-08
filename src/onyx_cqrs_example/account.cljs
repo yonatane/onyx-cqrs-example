@@ -1,14 +1,16 @@
 (ns onyx-cqrs-example.account
   (:require [cljs.pprint :refer [pprint]]
             [om.next :as om]
+            [onyx-cqrs-example.aggregation.event-sourcing :as es-agg]
             [onyx-cqrs-example.global-reconciler :as global-reconciler]))
 
 
-(defn init [window]
-  {::events []
-   ::aggregate nil})
+(defn init
+  [window]
+  {})
 
-(defn create-state-update [window state command]
+(defn create-state-update
+  [window state command]
   (case (:command/type command)
     :command.type/create-account
     {:event/type :event.type/account-created
@@ -29,58 +31,21 @@
     {:event/type :event.type/unknown-command
      :event/id (:command/id command)}))
 
-(defn apply-state-update [window state change]
-  (let [next-state (update state ::events conj change)]
-    (case (:event/type change)
-      :event.type/account-created
-      (assoc
-        next-state
-        ::aggregate 0)
+(defn apply-state-update
+  [window state change]
+  (case (:event/type change)
+    :event.type/account-created
+    (assoc state :balance 0)
 
-      :event.type/funds-modified
-      (update
-        next-state
-        ::aggregate
-        + (:funds.modify/amount change))
+    :event.type/funds-modified
+    (update state :balance + (:funds.modify/amount change))
 
-      next-state)))
-
-(def ^:export aggregation
-  {:aggregation/init init
-   :aggregation/create-state-update create-state-update
-   :aggregation/apply-state-update apply-state-update})
-
-
-(defn refinement-create-state-update
-  [trigger state state-event]
-  ::discard-persisted)
-
-(defn refinement-apply-state-update
-  [trigger state entry]
-  (case entry
-    ::discard-persisted
-    (update state ::events empty) ;TODO: remove only those that were persisted
-
-    ;; else leave as is
+    ;; else
     state))
 
-(def ^:export refinement
-  {:refinement/create-state-update refinement-create-state-update
-   :refinement/apply-state-update refinement-apply-state-update})
 
+(def ^:export aggregation (es-agg/wrap-aggregation init create-state-update apply-state-update))
 
-(defn ^:export sync-aggregation [task-event window trigger state-event state]
-  (let [;; workaround for onyx bug where task-event is nil: we just get the global reconciler ourselves.
-        task-event (assoc
-                     task-event
-                     :cqrs.app-state/reconciler (global-reconciler/get))
-        reconciler (:cqrs.app-state/reconciler task-event)
-        {::keys [events aggregate]} state]
-    (doseq [event events]
-      (try
-        (om/transact! reconciler `[(cqrs.store/put
-                                     {:store-key :cqrs/event-store
-                                      :id ~(:event/id event)
-                                      :obj ~event})
-                                   :cqrs/event-store])
-        (catch js/Error e (pprint e))))))
+(def ^:export refinement es-agg/refinement)
+
+(def ^:export sync es-agg/sync)

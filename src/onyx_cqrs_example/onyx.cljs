@@ -31,7 +31,7 @@
      :onyx/min-peers 3
      :onyx/flux-policy :recover
      :onyx/batch-size 1}
-    
+
     {:onyx/name :out
      :onyx/type :output
      :onyx/batch-size 1}]
@@ -51,7 +51,7 @@
      :trigger/on :onyx.triggers/segment
      :trigger/threshold [1 :elements]
      :trigger/refinement ::account/refinement
-     :trigger/sync ::account/sync-aggregation}]
+     :trigger/sync ::account/sync}]
    })
 
 
