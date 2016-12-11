@@ -1,51 +1,45 @@
 (ns onyx-cqrs-example.app-state
   (:require [cljs.pprint :refer [pprint]]
+            [onyx-cqrs-example.scenario.factory :as scenario-factory]
             [onyx-cqrs-example.store :as store]
             [onyx-cqrs-example.onyx :as onyx-setup]
             [onyx-local-rt.api :as onyx]
             [om.next :as om]))
 
 
-(def commands
-  [{:command/id 1
-    :command/type :command.type/create-account
-    :account/id "betty"}
-   {:command/id 2
-    :command/type :command.type/create-account
-    :account/id "sue"}
-   {:command/id 3
-    :command/type :command.type/deposit
-    :account/id "betty"
-    :deposit/amount 100}
-   {:command/id 4
-    :command/type :command.type/deposit
-    :account/id "sue"
-    :deposit/amount 200}
-   {:command/id 5
-    :command/type :command.type/withdraw
-    :account/id "betty"
-    :withdraw/amount 40}
-   {:command/id 6
-    :command/type :command.type/withdraw
-    :account/id "sue"
-    :withdraw/amount 70}])
+(def default-job
+  {:workflow
+   [[:in :out]]
+
+   :catalog
+   [{:onyx/name :in
+     :onyx/type :input
+     :onyx/batch-size 1}
+
+    {:onyx/name :out
+     :onyx/type :output
+     :onyx/batch-size 1}]})
+
+(defn default-state
+  []
+  {:cqrs.scenario/commands
+   []
+
+   :cqrs/command-store
+   (store/create)
+
+   :cqrs/event-store
+   (store/create)
+
+   :cqrs.onyx/env
+   (onyx-setup/new-onyx-env default-job)})
 
 
-(defn create
+(defn init-state-stack
   []
   (atom
     (list
-      {:cqrs.scenario/commands
-       commands
-
-       :cqrs/command-store
-       (store/create)
-
-       :cqrs/event-store
-       (store/create)
-
-       :cqrs.onyx/env
-       (onyx-setup/new-onyx-env)})))
+      (default-state))))
 
 
 (defn read
@@ -56,6 +50,17 @@
 
 
 (defmulti mutate om/dispatch)
+
+(defmethod mutate 'cqrs.state/init-scenario
+  [env key {:keys [scenario]}]
+  {:action
+   (fn []
+     (swap! (:state env)
+            (fn [state-stack]
+              (-> state-stack
+                  (last)
+                  (merge (scenario-factory/create scenario))
+                  (list)))))})
 
 (defmethod mutate 'cqrs.onyx.env/send-commands
   [env key params]
@@ -107,7 +112,6 @@
 
 (defmethod mutate :default
   [env key params]
-
     {:value {:keys [:cqrs.onyx/env]}
      :action
      (fn []
@@ -134,5 +138,5 @@
 (defn reconciler
   []
   (om/reconciler
-    {:state (create)
+    {:state (init-state-stack)
      :parser (om/parser {:read read :mutate mutate})}))
