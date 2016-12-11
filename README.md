@@ -1,10 +1,6 @@
 # onyx-cqrs-example
 
-FIXME: Write a one-line description of your library/project.
-
-## Overview
-
-FIXME: Write a paragraph about the library/project and highlight its goals.
+![](docs/screenshot.png)
 
 ## Setup
 
@@ -24,13 +20,6 @@ and you should see an alert in the browser window.
 To clean all compiled files:
 
     lein clean
-
-To create a production build run:
-
-    lein do clean, cljsbuild once min
-
-And open your browser in `resources/public/index.html`. You will not
-get live reloading, nor a REPL. 
 
 ## License
 
