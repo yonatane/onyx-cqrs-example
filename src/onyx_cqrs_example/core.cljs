@@ -40,6 +40,13 @@
                  (dom/button
                    #js {:onClick
                         (fn [e]
+                          (om/transact! this `[(cqrs.state/init-scenario {:scenario :order-sensitive})]))}
+                   "Ordered"))
+               (dom/div
+                 nil
+                 (dom/button
+                   #js {:onClick
+                        (fn [e]
                           (om/transact! this `[(cqrs.onyx.env/send-commands {:commands ~commands})]))}
                    "Send!")
                  (dom/button

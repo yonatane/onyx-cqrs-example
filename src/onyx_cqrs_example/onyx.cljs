@@ -1,6 +1,5 @@
 (ns onyx-cqrs-example.onyx
-  (:require [onyx-cqrs-example.account :as account]
-            [onyx-cqrs-example.global-reconciler :as global-reconciler]
+  (:require [onyx-cqrs-example.global-reconciler :as global-reconciler]
             [onyx-local-rt.api :as onyx]))
 
 

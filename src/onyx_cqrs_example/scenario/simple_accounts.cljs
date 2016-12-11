@@ -1,6 +1,6 @@
 (ns onyx-cqrs-example.scenario.simple-accounts
-  (:require [onyx-cqrs-example.account :as account]
-            [onyx-cqrs-example.onyx :as onyx-setup]))
+  (:require [onyx-cqrs-example.onyx :as onyx-setup]
+            [onyx-cqrs-example.aggregation.event-sourcing :as es-agg]))
 
 
 (def commands
@@ -26,6 +26,55 @@
     :command/type :command.type/withdraw
     :account/id "sue"
     :withdraw/amount 70}])
+
+
+(defn init-aggregation
+  [window]
+  {})
+
+(defn create-state-update
+  [window state command]
+  (case (:command/type command)
+    :command.type/create-account
+    {:event/type :event.type/account-created
+     :event/id (:command/id command)
+     :account/id (:account/id command)}
+
+    :command.type/deposit
+    {:event/type :event.type/funds-modified
+     :event/id (:command/id command)
+     :account/id (:account/id command)
+     :funds.modify/amount (:deposit/amount command)}
+
+    :command.type/withdraw
+    {:event/type :event.type/funds-modified
+     :event/id (:command/id command)
+     :account/id (:account/id command)
+     :funds.modify/amount (- (:withdraw/amount command))}
+
+    ;; else
+    {:event/type :event.type/unknown-command
+     :event/id (:command/id command)
+     :account/id (:account/id command)
+     :event/command command}))
+
+(defn apply-state-update
+  [window state change]
+  (case (:event/type change)
+    :event.type/account-created
+    (assoc state :balance 0)
+
+    :event.type/funds-modified
+    (update state :balance + (:funds.modify/amount change))
+
+    ;; else
+    state))
+
+(def ^:export aggregation (es-agg/wrap-aggregation init-aggregation create-state-update apply-state-update))
+
+(def ^:export refinement es-agg/refinement)
+
+(def ^:export sync es-agg/sync)
 
 
 (def job
@@ -59,14 +108,14 @@
    [{:window/id ::account-window
      :window/task ::aggregate-task
      :window/type :global
-     :window/aggregation ::account/aggregation}]
+     :window/aggregation ::aggregation}]
 
    :triggers
    [{:trigger/window-id ::account-window
      :trigger/on :onyx.triggers/segment
      :trigger/threshold [1 :elements]
-     :trigger/refinement ::account/refinement
-     :trigger/sync ::account/sync}]})
+     :trigger/refinement ::refinement
+     :trigger/sync ::sync}]})
 
 
 (defn init

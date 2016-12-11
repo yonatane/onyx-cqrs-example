@@ -9,26 +9,26 @@
   (fn
     [window]
     {::events []
-     ::aggregate (f window)}))
+     ::aggregate-state (f window)}))
 
 (defn wrap-create-state-update
   [f]
   (fn
-    [window state command]
+    [window {::keys [aggregate-state]} command]
     {::events-update ::conj-event
-     ::event (f window state command)}))
+     ::event (f window aggregate-state command)}))
 
 (defn wrap-apply-state-update
   [f]
   (fn
-    [window state {::keys [events-update event]}]
+    [window {::keys [aggregate-state] :as state} {::keys [events-update event]}]
       (cond-> state
 
               (= ::conj-event events-update)
               (update ::events conj event)
 
               :always
-              (update ::aggregate #(f window % event)))))
+              (update ::aggregate-state #(f window aggregate-state event)))))
 
 
 (defn refinement-create-state-update
@@ -56,7 +56,7 @@
                      task-event
                      :cqrs.app-state/reconciler (global-reconciler/get))
         reconciler (:cqrs.app-state/reconciler task-event)
-        {::keys [events aggregate]} state]
+        {::keys [events]} state]
     (doseq [event events]
         (om/transact! reconciler `[(cqrs.store/put {:store-key :cqrs/event-store
                                                     :id ~(:event/id event)

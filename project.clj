@@ -84,7 +84,7 @@
              ;; :repl false
 
              ;; to configure a different figwheel logfile path
-             ;; :server-logfile "tmp/logs/figwheel-logfile.log"
+             :server-logfile "tmp/logs/figwheel-logfile.log"
              }
 
 
