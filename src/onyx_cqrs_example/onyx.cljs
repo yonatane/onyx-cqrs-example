@@ -16,9 +16,12 @@
   [job]
   (onyx/init job))
 
-(defn send [onyx-env segments]
-  (reduce
-    (fn [onyx-env segment]
-      (onyx/new-segment onyx-env :in segment))
-    onyx-env
-    segments))
+(defn send
+  ([onyx-env segments]
+   (send onyx-env :in segments))
+  ([onyx-env input-task segments]
+   (reduce
+     (fn [onyx-env segment]
+       (onyx/new-segment onyx-env input-task segment))
+     onyx-env
+     segments)))

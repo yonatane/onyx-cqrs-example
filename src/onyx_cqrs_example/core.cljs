@@ -23,7 +23,7 @@
   Object
   (render [this]
     (let [{onyx-env :cqrs.onyx/env
-           commands :cqrs.scenario/commands
+           segments :cqrs.scenario/commands
            event-store :cqrs/event-store}
           (om/props this)]
       (dom/div nil
@@ -47,7 +47,7 @@
                  (dom/button
                    #js {:onClick
                         (fn [e]
-                          (om/transact! this `[(cqrs.onyx.env/send-commands {:commands ~commands})]))}
+                          (om/transact! this `[(cqrs.onyx.env/send-segments {:segments ~segments})]))}
                    "Send!")
                  (dom/button
                    #js {:onClick

@@ -62,18 +62,17 @@
                   (merge (scenario-factory/create scenario))
                   (list)))))})
 
-(defmethod mutate 'cqrs.onyx.env/send-commands
-  [env key params]
+(defmethod mutate 'cqrs.onyx.env/send-segments
+  [env key {:keys [segments input-task] :or {input-task :in}}]
   {:action
    (fn []
      (swap! (:state env)
             (fn [state-stack]
               (let [latest-state (first state-stack)
-                    commands (:commands params)
                     next-state (update-in
                                  latest-state
                                  [:cqrs.onyx/env]
-                                 onyx-setup/send commands)]
+                                 onyx-setup/send input-task segments)]
                 (conj state-stack next-state)))))})
 
 (defmethod mutate 'cqrs.state/reset
